@@ -1,3 +1,8 @@
+This is a fork of [fast-lzma2](https://github.com/conor42/fast-lzma2) packaged for Zig.  Some unnecessary files have been deleted and the build system has been replaced with `build.zig`.
+
+The original README follows:
+--------------------------------------------------------------------------------
+
 The __Fast LZMA2 Library__ is a lossless high-ratio data compression library based on Igor Pavlov's LZMA2 codec from 7-zip.
 
 Binaries of 7-Zip forks which use the algorithm are available in the [7-Zip-FL2 project], the [7-Zip-zstd project], and the active fork of [p7zip]. The library
