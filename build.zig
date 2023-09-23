@@ -57,4 +57,15 @@ fn addLib(
     lib.installHeader("fast-lzma2.h", "fast-lzma2.h");
     lib.installHeader("fl2_errors.h", "fl2_errors.h");
     b.installArtifact(lib);
+
+    const exe = b.addExecutable(.{
+        .name = name,
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.addCSourceFiles(&[_][]const u8 {
+        "cmdline_tool.c",
+    }, &.{});
+    exe.linkLibrary(lib);
+    b.installArtifact(exe);
 }
