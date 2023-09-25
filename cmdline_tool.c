@@ -39,7 +39,7 @@ MappedInFile mapInFile(const char *filename)
         FILE_ATTRIBUTE_NORMAL,
         NULL
     );
-    if (!handle) {
+    if (INVALID_HANDLE_VALUE == handle) {
         errorf("open '%s' failed, error=%u", filename, GetLastError());
         ExitProcess(-1);
     }
@@ -143,7 +143,7 @@ MappedOutFile mapOutFile(const char *filename, size_t len)
         FILE_ATTRIBUTE_NORMAL,
         NULL
     );
-    if (!map.handle) {
+    if (INVALID_HANDLE_VALUE == map.handle) {
         errorf("failed to create '%s', error=%u", filename, GetLastError());
         ExitProcess(-1);
     }
