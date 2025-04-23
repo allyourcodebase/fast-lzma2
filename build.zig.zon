@@ -1,0 +1,17 @@
+.{
+    .name = .fastlzma2,
+    .fingerprint = 0x347c40658187d580,
+    .minimum_zig_version = "0.14.0",
+    .version = "0.0.0",
+    .dependencies = .{
+        .upstream = .{
+            .url = "git+https://github.com/conor42/fast-lzma2#ded964d203cabe1a572d2c813c55e8a94b4eda48",
+            .hash = "N-V-__8AAOpxCwA7Fe5RC7qOg-leBYhE9lr0SOReWwyP6OmR",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "cmdline_tool.c",
+    },
+}
