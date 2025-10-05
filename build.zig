@@ -26,13 +26,15 @@ fn addLib(
     b: *std.Build,
     name: []const u8,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.Mode,
+    optimize: std.builtin.OptimizeMode,
     upstream_root: std.Build.LazyPath,
 ) void {
-    const lib = b.addStaticLibrary(.{
+    const lib = b.addLibrary(.{
         .name = name,
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     lib.addCSourceFiles(.{
         .root = upstream_root,
@@ -67,8 +69,10 @@ fn addLib(
 
     const exe = b.addExecutable(.{
         .name = name,
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+        }),
     });
     exe.addCSourceFiles(.{ .files = &[_][]const u8{
         "cmdline_tool.c",
@@ -79,9 +83,11 @@ fn addLib(
     const test_step = b.step("test", "Run unit tests");
     inline for (&.{ "lzma2", "errors", "streaming" }) |test_name| {
         const tests = b.addTest(.{
-            .root_source_file = b.path("test/" ++ test_name ++ ".zig"),
-            .target = target,
-            .optimize = optimize,
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("test/" ++ test_name ++ ".zig"),
+                .target = target,
+                .optimize = optimize,
+            }),
         });
         tests.linkLibrary(lib);
         tests.linkLibC();
