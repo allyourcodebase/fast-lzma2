@@ -75,4 +75,16 @@ fn addLib(
     } });
     exe.linkLibrary(lib);
     b.installArtifact(exe);
+
+    const test_step = b.step("test", "Run unit tests");
+    inline for (&.{ "lzma2", "errors", "streaming" }) |test_name| {
+        const tests = b.addTest(.{
+            .root_source_file = b.path("test/" ++ test_name ++ ".zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+        tests.linkLibrary(lib);
+        tests.linkLibC();
+        test_step.dependOn(&b.addRunArtifact(tests).step);
+    }
 }
