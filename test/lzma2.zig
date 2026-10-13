@@ -1,9 +1,6 @@
 const std = @import("std");
 const testing = std.testing;
-const c = @cImport({
-    @cInclude("fast-lzma2.h");
-    @cInclude("fl2_errors.h");
-});
+const c = @import("c");
 
 test "version check" {
     const version_num = c.FL2_versionNumber();
@@ -86,7 +83,7 @@ test "large data compression" {
 }
 
 test "compression levels" {
-    const input = "The quick brown fox jumps over the lazy dog. " ** 10;
+    const input = repeat(10, "The quick brown fox jumps over the lazy dog. ");
     const src_size = input.len;
 
     var prev_size: usize = std.math.maxInt(usize);
@@ -97,7 +94,7 @@ test "compression levels" {
         const compressed = try testing.allocator.alloc(u8, dst_capacity);
         defer testing.allocator.free(compressed);
 
-        const compressed_size = c.FL2_compress(compressed.ptr, dst_capacity, input.ptr, src_size, level);
+        const compressed_size = c.FL2_compress(compressed.ptr, dst_capacity, &input, src_size, level);
 
         try testing.expect(c.FL2_isError(compressed_size) == 0);
 
@@ -112,19 +109,19 @@ test "compression levels" {
         const actual_decompressed = c.FL2_decompress(decompressed.ptr, src_size, compressed.ptr, compressed_size);
 
         try testing.expect(c.FL2_isError(actual_decompressed) == 0);
-        try testing.expectEqualSlices(u8, input, decompressed);
+        try testing.expectEqualSlices(u8, &input, decompressed);
     }
 }
 
 test "multi-threaded compression" {
-    const input = "Test data for multi-threaded compression. " ** 100;
+    const input = repeat(100, "Test data for multi-threaded compression. ");
     const src_size = input.len;
 
     const dst_capacity = c.FL2_compressBound(src_size);
     const compressed = try testing.allocator.alloc(u8, dst_capacity);
     defer testing.allocator.free(compressed);
 
-    const compressed_size = c.FL2_compressMt(compressed.ptr, dst_capacity, input.ptr, src_size, 5, 2);
+    const compressed_size = c.FL2_compressMt(compressed.ptr, dst_capacity, &input, src_size, 5, 2);
 
     try testing.expect(c.FL2_isError(compressed_size) == 0);
 
@@ -134,7 +131,7 @@ test "multi-threaded compression" {
     const actual_decompressed = c.FL2_decompressMt(decompressed.ptr, src_size, compressed.ptr, compressed_size, 2);
 
     try testing.expect(c.FL2_isError(actual_decompressed) == 0);
-    try testing.expectEqualSlices(u8, input, decompressed);
+    try testing.expectEqualSlices(u8, &input, decompressed);
 }
 
 test "random binary data" {
@@ -164,15 +161,14 @@ test "random binary data" {
 }
 
 test "repetitive data compression" {
-    const pattern = "AAAA";
-    const input = pattern ** 1000;
+    const input = repeat(1000, "AAAA");
     const src_size = input.len;
 
     const dst_capacity = c.FL2_compressBound(src_size);
     const compressed = try testing.allocator.alloc(u8, dst_capacity);
     defer testing.allocator.free(compressed);
 
-    const compressed_size = c.FL2_compress(compressed.ptr, dst_capacity, input.ptr, src_size, 5);
+    const compressed_size = c.FL2_compress(compressed.ptr, dst_capacity, &input, src_size, 5);
 
     try testing.expect(c.FL2_isError(compressed_size) == 0);
     try testing.expect(compressed_size < src_size / 10);
@@ -183,5 +179,10 @@ test "repetitive data compression" {
     const actual_decompressed = c.FL2_decompress(decompressed.ptr, src_size, compressed.ptr, compressed_size);
 
     try testing.expect(c.FL2_isError(actual_decompressed) == 0);
-    try testing.expectEqualSlices(u8, input, decompressed);
+    try testing.expectEqualSlices(u8, &input, decompressed);
+}
+
+fn repeat(comptime count: usize, comptime text: []const u8) [count * text.len]u8 {
+    const rows: [count][text.len]u8 = @splat(text[0..text.len].*);
+    return @bitCast(rows);
 }

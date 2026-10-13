@@ -1,9 +1,6 @@
 const std = @import("std");
 const testing = std.testing;
-const c = @cImport({
-    @cInclude("fast-lzma2.h");
-    @cInclude("fl2_errors.h");
-});
+const c = @import("c");
 
 test "streaming compression basic" {
     const allocator = testing.allocator;
@@ -152,9 +149,9 @@ test "streaming with small output buffer" {
     const init_result = c.FL2_initCStream(stream, 5);
     try testing.expect(c.FL2_isError(init_result) == 0);
 
-    const input = "A" ** 1000;
+    const input: [1000]u8 = @splat('A');
     var in_buffer = c.FL2_inBuffer{
-        .src = input.ptr,
+        .src = &input,
         .size = input.len,
         .pos = 0,
     };
@@ -163,8 +160,8 @@ test "streaming with small output buffer" {
     const small_buffer = try allocator.alloc(u8, small_buffer_size);
     defer allocator.free(small_buffer);
 
-    var compressed_data = std.ArrayList(u8).init(allocator);
-    defer compressed_data.deinit();
+    var compressed_data: std.ArrayList(u8) = .empty;
+    defer compressed_data.deinit(allocator);
 
     while (in_buffer.pos < in_buffer.size) {
         var out_buffer = c.FL2_outBuffer{
@@ -176,7 +173,7 @@ test "streaming with small output buffer" {
         const result = c.FL2_compressStream(stream, &out_buffer, &in_buffer);
         try testing.expect(c.FL2_isError(result) == 0);
 
-        try compressed_data.appendSlice(small_buffer[0..out_buffer.pos]);
+        try compressed_data.appendSlice(allocator, small_buffer[0..out_buffer.pos]);
     }
 
     var finish_needed: usize = 1;
@@ -190,7 +187,7 @@ test "streaming with small output buffer" {
         finish_needed = c.FL2_endStream(stream, &out_buffer);
         try testing.expect(c.FL2_isError(finish_needed) == 0);
 
-        try compressed_data.appendSlice(small_buffer[0..out_buffer.pos]);
+        try compressed_data.appendSlice(allocator, small_buffer[0..out_buffer.pos]);
     }
 
     const decompressed = try allocator.alloc(u8, input.len);
@@ -199,7 +196,7 @@ test "streaming with small output buffer" {
     const decompress_result = c.FL2_decompress(decompressed.ptr, input.len, compressed_data.items.ptr, compressed_data.items.len);
 
     try testing.expect(c.FL2_isError(decompress_result) == 0);
-    try testing.expectEqualSlices(u8, input, decompressed);
+    try testing.expectEqualSlices(u8, &input, decompressed);
 }
 
 test "streaming reset and reuse" {

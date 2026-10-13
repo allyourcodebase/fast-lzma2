@@ -1,7 +1,7 @@
 .{
     .name = .fastlzma2,
     .fingerprint = 0x347c40658187d580,
-    .minimum_zig_version = "0.14.0",
+    .minimum_zig_version = "0.17.0",
     .version = "0.0.0",
     .dependencies = .{
         .upstream = .{

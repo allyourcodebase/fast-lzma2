@@ -26,7 +26,7 @@ fn addLib(
     b: *std.Build,
     name: []const u8,
     target: std.Build.ResolvedTarget,
-    optimize: std.builtin.OptimizeMode,
+    optimize: std.lang.Optimize,
     upstream_root: std.Build.LazyPath,
 ) void {
     const lib = b.addLibrary(.{
@@ -34,9 +34,10 @@ fn addLib(
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
         }),
     });
-    lib.addCSourceFiles(.{
+    lib.root_module.addCSourceFiles(.{
         .root = upstream_root,
         .files = &[_][]const u8{
             "dict_buffer.c",
@@ -62,7 +63,6 @@ fn addLib(
             "-fno-sanitize=undefined",
         },
     });
-    lib.linkLibC();
     lib.installHeader(upstream_root.path(b, "fast-lzma2.h"), "fast-lzma2.h");
     lib.installHeader(upstream_root.path(b, "fl2_errors.h"), "fl2_errors.h");
     b.installArtifact(lib);
@@ -72,13 +72,26 @@ fn addLib(
         .root_module = b.createModule(.{
             .target = target,
             .optimize = optimize,
+            .link_libc = true,
         }),
     });
-    exe.addCSourceFiles(.{ .files = &[_][]const u8{
+    exe.root_module.addCSourceFiles(.{ .files = &[_][]const u8{
         "cmdline_tool.c",
     } });
-    exe.linkLibrary(lib);
+    exe.root_module.linkLibrary(lib);
     b.installArtifact(exe);
+
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.addWriteFiles().add("c.h",
+            \\#include <fast-lzma2.h>
+            \\#include <fl2_errors.h>
+            \\
+        ),
+        .target = target,
+        .optimize = optimize,
+    });
+    translate_c.addIncludePath(upstream_root);
+    const c_mod = translate_c.createModule();
 
     const test_step = b.step("test", "Run unit tests");
     inline for (&.{ "lzma2", "errors", "streaming" }) |test_name| {
@@ -87,10 +100,11 @@ fn addLib(
                 .root_source_file = b.path("test/" ++ test_name ++ ".zig"),
                 .target = target,
                 .optimize = optimize,
+                .link_libc = true,
+                .imports = &.{.{ .name = "c", .module = c_mod }},
             }),
         });
-        tests.linkLibrary(lib);
-        tests.linkLibC();
+        tests.root_module.linkLibrary(lib);
         test_step.dependOn(&b.addRunArtifact(tests).step);
     }
 }

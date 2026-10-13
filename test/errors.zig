@@ -1,18 +1,15 @@
 const std = @import("std");
 const testing = std.testing;
-const c = @cImport({
-    @cInclude("fast-lzma2.h");
-    @cInclude("fl2_errors.h");
-});
+const c = @import("c");
 
 test "insufficient destination buffer" {
-    const input = "This is a long string that we will try to compress into a very small buffer" ** 10;
+    const input = repeat(10, "This is a long string that we will try to compress into a very small buffer");
     const src_size = input.len;
 
     const compressed = try testing.allocator.alloc(u8, 10);
     defer testing.allocator.free(compressed);
 
-    const result = c.FL2_compress(compressed.ptr, 10, input.ptr, src_size, 5);
+    const result = c.FL2_compress(compressed.ptr, 10, &input, src_size, 5);
 
     try testing.expect(c.FL2_isError(result) != 0);
 
@@ -166,4 +163,9 @@ test "error string retrieval" {
     try testing.expectEqualSlices(u8, "Destination buffer is too small", std.mem.span(error_name));
     const error_string = c.FL2_getErrorString(@as(c_uint, @truncate(error_code)));
     try testing.expect(error_string != null);
+}
+
+fn repeat(comptime count: usize, comptime text: []const u8) [count * text.len]u8 {
+    const rows: [count][text.len]u8 = @splat(text[0..text.len].*);
+    return @bitCast(rows);
 }
